@@ -25,7 +25,7 @@ func TestCryptocurrencyInfo(t *testing.T) {
 func TestCryptocurrencyMap(t *testing.T) {
 	listings, err := client.Cryptocurrency.Map(&MapOptions{
 		ListingStatus: "active",
-		Limit:         1,
+		//Limit:         1,
 	})
 	if err != nil {
 		t.Error(err)

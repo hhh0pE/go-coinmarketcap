@@ -68,16 +68,24 @@ type Listing struct {
 	Quote             map[string]*Quote `json:"quote"`
 }
 
+type PlarformInfo struct {
+	ID           int    `json:"id"`
+	Name         string `json:"name"`
+	Symbol       string `json:"symbol"`
+	Slug         string `json:"slug"`
+	TokenAddress string `json:"token_address"`
+}
+
 // MapListing is the structure of a map listing
 type MapListing struct {
-	ID                  float64 `json:"id"`
-	Name                string  `json:"name"`
-	Symbol              string  `json:"symbol"`
-	Slug                string  `json:"slug"`
-	IsActive            int     `json:"is_active"`
-	FirstHistoricalData string  `json:"first_historical_data"`
-	LastHistoricalData  string  `json:"last_historical_data"`
-	Platform            *string
+	ID                  float64       `json:"id"`
+	Name                string        `json:"name"`
+	Symbol              string        `json:"symbol"`
+	Slug                string        `json:"slug"`
+	IsActive            int           `json:"is_active"`
+	FirstHistoricalData string        `json:"first_historical_data"`
+	LastHistoricalData  string        `json:"last_historical_data"`
+	Platform            *PlarformInfo `json:"platform"`
 }
 
 // ConvertListing is the converted listing structure
@@ -386,6 +394,10 @@ func (s *CryptocurrencyService) Map(options *MapOptions) ([]*MapListing, error) 
 	url := fmt.Sprintf("%s/cryptocurrency/map?%s", baseURL, strings.Join(params, "&"))
 
 	body, err := s.client.makeReq(url)
+	if err != nil {
+		return nil, errors.New("Request error: " + err.Error())
+	}
+
 	resp := new(Response)
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
