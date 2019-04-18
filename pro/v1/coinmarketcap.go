@@ -390,25 +390,30 @@ func (s *CryptocurrencyService) Map(options *MapOptions) ([]*MapListing, error) 
 	if options.Symbol != "" {
 		params = append(params, fmt.Sprintf("symbol=%s", options.Symbol))
 	}
+	fmt.Println("here")
 
 	url := fmt.Sprintf("%s/cryptocurrency/map?%s", baseURL, strings.Join(params, "&"))
 
+	fmt.Println("her2")
 	body, err := s.client.makeReq(url)
 	if err != nil {
 		return nil, errors.New("Request error: " + err.Error())
 	}
+	fmt.Println("her3")
 
 	resp := new(Response)
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("JSON Error: [%s]. Response body: [%s]", err.Error(), string(body))
 	}
+	fmt.Println("here4")
 
 	var result []*MapListing
 	ifcs, ok := resp.Data.(interface{})
 	if !ok {
 		return nil, ErrTypeAssertion
 	}
+	fmt.Println("her5")
 
 	for _, item := range ifcs.([]interface{}) {
 		value := new(MapListing)
@@ -424,6 +429,7 @@ func (s *CryptocurrencyService) Map(options *MapOptions) ([]*MapListing, error) 
 
 		result = append(result, value)
 	}
+	fmt.Println("here6")
 
 	return result, nil
 }

@@ -13,7 +13,7 @@ import (
 	"sort"
 
 	"github.com/anaskhan96/soup"
-	"github.com/miguelmota/go-coinmarketcap/v2/types"
+	"github.com/hhh0pE/go-coinmarketcap/v2/types"
 )
 
 var (

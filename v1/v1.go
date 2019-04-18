@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/miguelmota/go-coinmarketcap/v1/types"
+	"github.com/hhh0pE/go-coinmarketcap/v1/types"
 )
 
 // Tickers get information about all coins listed in Coin Market Cap

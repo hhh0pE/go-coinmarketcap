@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	cmc "github.com/miguelmota/go-coinmarketcap/v1"
+	cmc "github.com/hhh0pE/go-coinmarketcap/v1"
 )
 
 func main() {

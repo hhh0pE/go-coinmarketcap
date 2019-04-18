@@ -1,4 +1,4 @@
-module github.com/miguelmota/go-coinmarketcap
+module github.com/hhh0pE/go-coinmarketcap
 
 require (
 	github.com/anaskhan96/soup v1.0.1
