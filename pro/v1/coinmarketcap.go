@@ -52,6 +52,11 @@ type Response struct {
 	Data   interface{} `json:"data"`
 }
 
+type mapListingWrapper struct {
+	Status Status        `json:"status"`
+	Data   []*MapListing `json:"data"`
+}
+
 // Listing is the listing structure
 type Listing struct {
 	ID                float64           `json:"id"`
@@ -390,48 +395,21 @@ func (s *CryptocurrencyService) Map(options *MapOptions) ([]*MapListing, error) 
 	if options.Symbol != "" {
 		params = append(params, fmt.Sprintf("symbol=%s", options.Symbol))
 	}
-	fmt.Println("here")
 
 	url := fmt.Sprintf("%s/cryptocurrency/map?%s", baseURL, strings.Join(params, "&"))
 
-	fmt.Println("her2")
 	body, err := s.client.makeReq(url)
 	if err != nil {
 		return nil, errors.New("Request error: " + err.Error())
 	}
-	fmt.Println("her3")
 
-	resp := new(Response)
+	resp := new(mapListingWrapper)
 	err = json.Unmarshal(body, &resp)
 	if err != nil {
 		return nil, fmt.Errorf("JSON Error: [%s]. Response body: [%s]", err.Error(), string(body))
 	}
-	fmt.Println("here4")
 
-	var result []*MapListing
-	ifcs, ok := resp.Data.(interface{})
-	if !ok {
-		return nil, ErrTypeAssertion
-	}
-	fmt.Println("her5")
-
-	for _, item := range ifcs.([]interface{}) {
-		value := new(MapListing)
-		b, err := json.Marshal(item)
-		if err != nil {
-			return nil, err
-		}
-
-		err = json.Unmarshal(b, value)
-		if err != nil {
-			return nil, err
-		}
-
-		result = append(result, value)
-	}
-	fmt.Println("here6")
-
-	return result, nil
+	return resp.Data, nil
 }
 
 // Exchange ...
