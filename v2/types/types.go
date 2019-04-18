@@ -1,5 +1,9 @@
 package types
 
+import (
+	"time"
+)
+
 // Listing struct
 type Listing struct {
 	ID     int    `json:"id"`
@@ -59,15 +63,32 @@ type TickerGraph struct {
 type Market struct {
 	Rank          int
 	Exchange      string
+	ExchangeSlug  string
 	Pair          string
 	VolumeUSD     float64
 	Price         float64
 	VolumePercent float64
 	Updated       string
+	Category      string
+	FeeType       string
 }
 
 // MarketGraph struct
 type MarketGraph struct {
 	MarketCapByAvailableSupply [][]float64 `json:"market_cap_by_available_supply"`
 	VolumeUSD                  [][]float64 `json:"volume_usd"`
+}
+
+type Exchange struct {
+	Name            string
+	Slug            string
+	Rank            int
+	LogoImg         string
+	AdjustVolume24h float64
+	Volume24h       float64
+	Volume7d        float64
+	Volume30d       float64
+	MarketsNumber   int
+	Change24h       float64
+	LaunchedAt      time.Time
 }

@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"sort"
 
+	"github.com/PuerkitoBio/goquery"
 	"github.com/anaskhan96/soup"
 	"github.com/hhh0pE/go-coinmarketcap/v2/types"
 )
@@ -243,13 +246,25 @@ func GlobalAltcoinMarketGraph(options *GlobalAltcoinMarketGraphOptions) (*types.
 // MarketsOptions options for markets method
 type MarketsOptions struct {
 	Symbol string
+	Slug   string
 }
 
 // Markets get market data for a cryptocurrency
 func Markets(options *MarketsOptions) ([]*types.Market, error) {
-	slug, err := CoinSlug(options.Symbol)
-	if err != nil {
-		return nil, err
+	if options == nil {
+		return nil, errors.New("nil options")
+	}
+	if options.Slug == "" && options.Symbol == "" {
+		return nil, errors.New("empty slug and Symbol")
+	}
+
+	slug := options.Slug
+	if slug == "" {
+		var slug_err error
+		slug, slug_err = CoinSlug(options.Symbol)
+		if slug_err != nil {
+			return nil, slug_err
+		}
 	}
 	url := fmt.Sprintf("%s/currencies/%s/#markets", siteURL, slug)
 	var markets []*types.Market
@@ -260,25 +275,106 @@ func Markets(options *MarketsOptions) ([]*types.Market, error) {
 	rows := soup.HTMLParse(response).Find("table", "id", "markets-table").Find("tbody").FindAll("tr")
 	for _, row := range rows {
 		var data []string
-		for _, column := range row.FindAll("td") {
+		var exchangeSlug string
+		for ci, column := range row.FindAll("td") {
 			attrs := column.Attrs()
 			if attrs["data-sort"] != "" {
 				data = append(data, attrs["data-sort"])
 			} else {
 				data = append(data, column.Text())
 			}
+			if ci == 1 { // td #2
+				aAttrs := column.Find("a").Attrs()
+				if link, exist := aAttrs["href"]; exist {
+					link_parts := strings.Split(link, "/")
+					exchangeSlug = link_parts[len(link_parts)-1]
+				}
+			}
 		}
 		markets = append(markets, &types.Market{
 			Rank:          toInt(data[0]),
 			Exchange:      data[1],
+			ExchangeSlug:  exchangeSlug,
 			Pair:          data[2],
 			VolumeUSD:     toFloat(data[3]),
 			Price:         toFloat(data[4]),
 			VolumePercent: toFloat(data[5]),
-			Updated:       data[6],
+			Category:      data[6],
+			FeeType:       data[7],
+			Updated:       data[8],
 		})
 	}
 	return markets, nil
+}
+
+func Exchanges() ([]*types.Exchange, error) {
+	var exchanges []*types.Exchange
+	for i := 1; i > 0; i++ {
+		pageExchanges, err := ExchangesByPage(i)
+		if len(pageExchanges) == 0 {
+			break
+		}
+		if err != nil {
+			return nil, errors.New("Exchanges error: " + err.Error())
+		}
+		exchanges = append(exchanges, pageExchanges...)
+	}
+	return exchanges, nil
+}
+
+func ExchangesByPage(page int) ([]*types.Exchange, error) {
+	if page == 0 {
+		page = 1
+	}
+	url := fmt.Sprintf("%s/rankings/exchanges/%d", siteURL, page)
+	var exchanges []*types.Exchange
+
+	doc, err := goquery.NewDocument(url)
+	if err != nil {
+		return nil, err
+	}
+
+	trElems := doc.Find("table#exchange-rankings tbody tr")
+	for tri := 0; tri < trElems.Length(); tri++ {
+		tr := trElems.Eq(tri)
+
+		var data []string
+		var exchangeSlug string
+		var exchangeLogo string
+		tr.Find("td").Each(func(tdi int, selection *goquery.Selection) {
+			if val, exist := selection.Attr("data-sort"); exist {
+				data = append(data, val)
+			} else {
+				data = append(data, selection.Text())
+			}
+
+			if tdi == 1 {
+				if href, exist := selection.Find("a").Attr("href"); exist {
+					link_parts := strings.Split(strings.TrimSuffix(href, "/"), "/")
+					exchangeSlug = link_parts[len(link_parts)-1]
+				}
+				if src, exist := selection.Find("img").Attr("src"); exist {
+					exchangeLogo = src
+				}
+			}
+		})
+
+		exchanges = append(exchanges, &types.Exchange{
+			Rank:            toInt(data[0]),
+			Name:            data[1],
+			Slug:            exchangeSlug,
+			LogoImg:         exchangeLogo,
+			AdjustVolume24h: toFloat(data[2]),
+			Volume24h:       toFloat(data[3]),
+			Volume7d:        toFloat(data[4]),
+			Volume30d:       toFloat(data[5]),
+			MarketsNumber:   toInt(data[6]),
+			Change24h:       toFloat(data[7]) / 100,
+			LaunchedAt:      toDate(data[9]),
+		})
+	}
+
+	return exchanges, nil
 }
 
 // PriceOptions options for price method
@@ -348,6 +444,11 @@ func toFloat(rawFloat string) float64 {
 	return parsed
 }
 
+func toDate(rawTime string) time.Time {
+	parsedTime, _ := time.Parse("2006-01-02", rawTime)
+	return parsedTime
+}
+
 // doReq HTTP client
 func doReq(req *http.Request) ([]byte, error) {
 	client := &http.Client{}
@@ -379,4 +480,21 @@ func makeReq(url string) ([]byte, error) {
 	}
 
 	return resp, err
+}
+
+func fetch(url string) (io.Reader, error) {
+	req, err := http.NewRequest("GET", url, nil)
+	if err != nil {
+		return nil, err
+	}
+	client := &http.Client{}
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	if 200 != resp.StatusCode {
+		respBytes, _ := ioutil.ReadAll(resp.Body)
+		return nil, fmt.Errorf("Not 200 status(%d): %s", resp.StatusCode, string(respBytes))
+	}
+	return resp.Body, nil
 }
